@@ -1,7 +1,12 @@
-from flask import Flask
+import sys
+import os
+from app import create_app
 from flask import jsonify
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE_DIR, 'common'))
+
+app = create_app('dev')
 
 
 @app.route('/')
