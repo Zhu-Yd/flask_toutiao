@@ -34,7 +34,7 @@ def verify_jwt(token, secret=None):
 
     try:
         payload = jwt.decode(token, secret, algorithms=['HS256'])
-    except jwt.PyJWTError:
+    except jwt.PyJWTError :
         payload = None
 
     return payload

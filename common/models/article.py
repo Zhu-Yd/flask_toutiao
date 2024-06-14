@@ -1,5 +1,6 @@
 from app import db
 from datetime import datetime
+from models import BaseModel
 
 # 用户收藏文章关系表
 user2article = db.Table('tt_user2article',
@@ -7,7 +8,7 @@ user2article = db.Table('tt_user2article',
                      db.Column('article_id', db.Integer, db.ForeignKey('tt_article.id'), primary_key=True)
                      )
 
-class Article(db.Model):
+class Article(BaseModel):
     __tablename__ = 'tt_article'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String)
@@ -42,7 +43,7 @@ class Article(db.Model):
         }
 
 
-class IsLike(db.Model):
+class IsLike(BaseModel):
     __tablename__ = 'tt_islike'
 
     class LikeType:
@@ -54,7 +55,7 @@ class IsLike(db.Model):
     like_id = db.Column(db.Integer, primary_key=True)
 
 
-class Comment(db.Model):
+class Comment(BaseModel):
     __tablename__ = 'tt_comment'
 
     class IsTop:

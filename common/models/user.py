@@ -1,12 +1,13 @@
 from app import db
 from models.article import user2article
+from models import BaseModel
 user2user = db.Table('tt_user2user',
                      db.Column('from_user_id', db.Integer, db.ForeignKey('tt_user.id'), primary_key=True),
                      db.Column('to_user_id', db.Integer, db.ForeignKey('tt_user.id'), primary_key=True)
                      )
 
 
-class User(db.Model):
+class User(BaseModel):
     __tablename__ = 'tt_user'
 
     class GENDER:
@@ -54,7 +55,7 @@ class User(db.Model):
         }
 
 
-class UserProfile(db.Model):
+class UserProfile(BaseModel):
     __tablename__ = 'tt_user_info'
     real_name = db.Column('real_name', db.String)
     id_number = db.Column('id_number', db.String)

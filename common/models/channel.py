@@ -1,14 +1,14 @@
 from app import db
+from models import BaseModel
 
-
-class User2Channel(db.Model):
+class User2Channel(BaseModel):
     __tablename__ = 'tt_user2channel'
     user_id = db.Column(db.Integer, db.ForeignKey('tt_user.id'), primary_key=True)
     channel_id = db.Column(db.Integer, db.ForeignKey('tt_channel.id'), primary_key=True)
     seq = db.Column(db.Integer)
 
 
-class Channel(db.Model):
+class Channel(BaseModel):
     __tablename__ = 'tt_channel'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
