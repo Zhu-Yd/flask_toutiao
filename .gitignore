@@ -4,4 +4,4 @@
 .idea
 .venv
 
-config.py
+**/config.py
