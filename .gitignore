@@ -5,3 +5,7 @@
 .venv
 
 **/config.py
+
+*.pem
+
+**/.qiniu_pythonsdk_hostscache.json

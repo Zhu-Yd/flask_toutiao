@@ -1,16 +1,17 @@
-import time
-
+import os
 from flask_restful import Resource, inputs
+import flask_restful
 from flask import g
 import werkzeug
 from sqlalchemy import func
+from sqlalchemy.orm import load_only
 from flask_restful.reqparse import RequestParser
 
 from utils.decorators import login_required
 from app import db
 from models.user import User, UserProfile, user2user
 from models.article import Article, IsLike, Comment
-from utils import validate_util
+from utils import validate_util, qiniu_storage
 
 
 class TodoItem(Resource):
@@ -19,7 +20,7 @@ class TodoItem(Resource):
 
 
 class CurrentUserProfileResource(Resource):
-    method_decorators = {'get': [login_required], 'post': [login_required]}
+    method_decorators = {'get': [login_required], 'patch': [login_required]}
 
     def get(self):
         """获取当前用户信息"""
@@ -28,7 +29,7 @@ class CurrentUserProfileResource(Resource):
             User.id == g.userInfo.get('id')).first()
         userInfo = {**(user.to_dict()), **(profile.to_dict() if profile else {})}
 
-        return {'message': '获取用户信息成功', 'status': 0, 'data': userInfo}
+        return {'message': '获取用户信息成功', 'status': 200, 'data': userInfo}
 
     def patch(self):
         """修改当前用户信息"""
@@ -46,9 +47,38 @@ class CurrentUserProfileResource(Resource):
         parser.add_argument('id_number', type=inputs.regex(r'^\d{17}(\d|x|X)$'), location=['json', 'form'])
         parser.add_argument('intro', location=['json', 'form'])
         args = parser.parse_args()
-        photo = args['photo']
+
+        def upload(file, name):
+            if file is not None:
+
+                file.seek(0, os.SEEK_END)  # 将指针移动到文件末尾
+                file_size = file.tell()  # 获取文件大小
+
+                # 检查文件大小
+                if file_size > 1048576:  # 1M = 1024 * 1024 字节
+                    raise Exception(f"File size exceeds 1MB: {file_size} bytes")
+
+                file.seek(0, os.SEEK_SET)  # 重置文件指针
+
+                photo_url = qiniu_storage.uploadFile(file.read())
+                args[name] = photo_url
+            return
+
+        try:
+            photo = args['photo']
+            upload(photo, 'photo')
+            id_card_front = args['id_card_front']
+            upload(id_card_front, 'id_card_front')
+            id_card_back = args['id_card_back']
+            upload(id_card_back, 'id_card_back')
+            id_card_handheld = args['id_card_handheld']
+            upload(id_card_handheld, 'id_card_handheld')
+        except Exception as e:
+            flask_restful.abort(500, message='THIRD_ERROR:{}'.format(e))
+            # return {'status':500,'message': 'THIRD_ERROR:{}'.format(e)},500
 
         args = {key: value for key, value in args.items() if value}  # 生成动态更新字典
+
         # 查询当前用户的信息和附加信息(select for update 锁定)
         user, user_profile = db.session.query(User, UserProfile).outerjoin(UserProfile,
                                                                            User.id == UserProfile.user_id).filter(
@@ -64,7 +94,9 @@ class CurrentUserProfileResource(Resource):
         # 提交事务
         db.session.commit()
 
-        return 'ok'
+        return {
+            'status': 200, 'message': '更新信息成功',
+        }
 
 
 class SpecifyUserProfileResource(Resource):
@@ -99,7 +131,132 @@ class SpecifyUserProfileResource(Resource):
             join(Comment, IsLike.like_id == Comment.id).filter(
             Comment.user_id == id, IsLike.like_type == IsLike.LikeType.COMMENT).scalar()
 
-        res_dict = {'follow_count': follow_count, 'fan_count': fans_count, 'art_count': art_count,
+        res_dict = {'follow_count': follow_count, 'fans_count': fans_count, 'art_count': art_count,
                     'like_count': a_like_count + c_like_count}
 
-        return {'status': 0, 'message': '获取指定用户信息成功', 'data': res_dict}
+        return {'status': 200, 'message': '获取指定用户信息成功', 'data': res_dict}
+
+
+class UserFollowingsResource(Resource):
+    method_decorators = {'get': [login_required], 'post': [login_required]}
+
+    def get(self):
+        """获取用户关注列表"""
+        parser = RequestParser()
+        parser.add_argument('page', type=int, location=['args'])
+        parser.add_argument('per_page', type=int, location=['args'])
+        args = parser.parse_args()
+        res_dict = {}
+        user_list = []
+        if args['page'] and args['per_page']:
+            paginate = db.session.query(User).options(load_only(User.id, User.name, User.photo)). \
+                outerjoin(user2user, User.id == user2user.c.to_user_id).filter(
+                user2user.c.from_user_id == g.userInfo.get('id')).paginate(args['page'], args['per_page'])
+            users = paginate.items  # 获取当前页的用户列表
+            res_dict['total_count'] = paginate.total  # 获取总记录数
+        else:
+            users = db.session.query(User).options(load_only(User.id, User.name, User.photo)). \
+                outerjoin(user2user, User.id == user2user.c.to_user_id).filter(
+                user2user.c.from_user_id == g.userInfo.get('id')).all()
+            res_dict['total_count'] = len(users)
+        for item in users:
+            user_dict = {
+                'id': item.id,
+                'name': item.name,
+                'photo': item.photo,
+                'mutual_follow': False,
+                'fans_count': 0
+            }
+            item_following = item.following  # item 关注的 用户
+            for item_in in item_following:
+                # 如果item关注的用户中有当前用户 则为 相互关注
+                if item_in.id == g.userInfo.get('id'):
+                    user_dict['mutual_follow'] = True
+                    break
+
+            item_followers = item.followers  # item 的 粉丝
+            user_dict['fans_count'] = item_followers.count()  # item 的 粉丝数量
+
+            user_list.append(user_dict)
+        res_dict.update({'status': 200, 'message': '获取用户关注列表成功',
+                         'data': {'page': args['page'], 'per_page': args['per_page'], 'results': user_list}})
+
+        return res_dict
+
+    def post(self):
+        """关注用户"""
+        parser = RequestParser()
+        parser.add_argument('to_user_id', type=int, required=True, location=['form', 'json'])
+        args = parser.parse_args()
+        try:
+            # 当前用户
+            user = db.session.query(User).options(load_only(User.id)).filter(User.id == g.userInfo.get('id')).one()
+            # 拟关注用户
+            to_user = db.session.query(User).options(load_only(User.id)).filter(User.id == args['to_user_id']).one()
+            # 关注
+            user.following.append(to_user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            flask_restful.abort(500, message=str(e))
+        return {'status': 200, 'message': '关注用户成功', 'data': {
+            'target': args['to_user_id']
+        }}
+
+
+class UserFollowersResource(Resource):
+    method_decorators = {'get': [login_required]}
+
+    def get(self):
+        """获取用户粉丝列表"""
+        parser = RequestParser()
+        parser.add_argument('per_page', type=int, location=['args'])
+        parser.add_argument('page', type=int, location=['args'])
+        args = parser.parse_args()
+        res_dict = {}
+        user_list = []
+        if args['per_page'] and args['page']:
+            paginate = db.session.query(User).options(load_only(User.id, User.name, User.photo)).outerjoin(user2user,
+                                                                                                           User.id == user2user.c.from_user_id).filter(
+                user2user.c.to_user_id == g.userInfo.get('id')).paginate(args['page'], args['per_page'])
+            users = paginate.items
+            res_dict['totle_count'] = paginate.total
+        else:
+            users = db.session.query(User).options(load_only(User.id, User.name, User.photo)).outerjoin(user2user,
+                                                                                                        User.id == user2user.c.from_user_id).filter(
+                user2user.c.to_user_id == g.userInfo.get('id')).all()
+            res_dict['totle_count'] = len(users)
+        for item in users:
+            dict = {
+                'id': item.id,
+                'name': item.name,
+                'photo': item.photo,
+                'mutual_follow': False,
+                'fans_count': 0
+            }
+            item_followers = item.followers  # 获取 item 粉丝
+            # 判断 item 与 当前用户 是否相互关注
+            for item_in in item_followers:
+                dict['mutual_follow'] = True if item_in.id == g.userInfo.get('id') else False
+                break
+            dict['fans_count'] = item_followers.count()  # 获取 item 粉丝数量
+            user_list.append(dict)
+        res_dict.update({'status': 200, 'message': '获取用户粉丝列表成功',
+                         'data': {'page': args['page'], 'per_page': args['per_page'], 'results': user_list}})
+        return res_dict
+
+
+class UserUnFollowingsResource(Resource):
+    method_decorators = {'delete': [login_required]}
+
+    def delete(self, to_user_id):
+        """取消关注用户"""
+        try:
+            user = db.session.query(User).options(load_only(User.id)).filter(User.id == g.userInfo.get('id')).one()
+            to_user = db.session.query(User).options(load_only(User.id)).filter(User.id == to_user_id).one()
+            user.following.remove(to_user)
+            db.session.commit()
+        except Exception as e:
+            flask_restful.abort(500, message=str(e))
+
+        return {'status': 200, 'message': '取消关注用户成功'}

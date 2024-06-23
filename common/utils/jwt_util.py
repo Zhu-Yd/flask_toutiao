@@ -8,7 +8,7 @@ def generate_jwt(payload, expiry=None, secret=None):
     """
     生成jwt
     :param payload: dict 载荷
-    :param expiry: datetime 有效期 时间戳 默认8h
+    :param expiry: datetime 有效期 时间戳 默认10h
     :param secret: 密钥
     :return: jwt
     """

@@ -3,9 +3,10 @@ from app.settings.config import config_dict
 from utils import constants, converters
 from flask_sqlalchemy import SQLAlchemy
 from redis import StrictRedis
+from flask_cors import CORS
 
 # 数据库对象
-db = SQLAlchemy()
+db: SQLAlchemy = SQLAlchemy()
 
 # redis对象
 redis_cli = None  # type: StrictRedis
@@ -49,6 +50,9 @@ def register_extensions(app: Flask):
     from utils import middlewares
     app.before_request(middlewares.auth_jwt_token)  # 添加请求钩子（鉴权中间件）
 
+    # 支持跨域请求
+    CORS(app, supports_credentials=True)
+
 
 def register_buleprint(app: Flask):
     # 导入app模块蓝图
@@ -57,3 +61,6 @@ def register_buleprint(app: Flask):
     # 导入用户模块蓝图
     from app.resource.user import user_bp
     app.register_blueprint(user_bp)
+    # 导入频道模块蓝图
+    from app.resource.channel import channel_bp
+    app.register_blueprint(channel_bp)

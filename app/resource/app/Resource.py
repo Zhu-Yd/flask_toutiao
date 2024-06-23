@@ -41,6 +41,6 @@ class LoginResource(Resource):
         # 生成token
         token = generate_jwt(userInfo)
 
-        return {'status': 0,
+        return {'status': 200,
                 'message': '登录成功',
                 'token': token}
