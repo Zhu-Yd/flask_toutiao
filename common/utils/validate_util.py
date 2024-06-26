@@ -14,6 +14,7 @@ def mobile(mobile_str):
     else:
         raise ValueError('{} is not a valid mobile'.format(mobile_str))
 
+
 def email(email_str):
     """
     检验邮箱格式
@@ -24,6 +25,18 @@ def email(email_str):
         return email_str
     else:
         raise ValueError('{} is not a valid email'.format(email_str))
+
+
+def notNoneStr(in_str: str):
+    """
+    检验非空字符串
+    :param in_str: str 被检验字符串
+    :return: in_str
+    """
+    if in_str.strip():
+        return in_str
+    else:
+        raise ValueError('input str is null')
 
 
 def image_base64(value):

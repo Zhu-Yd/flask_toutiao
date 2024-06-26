@@ -6,7 +6,7 @@ from utils.custom_error import custom_404_error
 app_bp = Blueprint('app_bp', __name__, url_prefix='/app')
 api = Api(app_bp, catch_all_404s=True)
 
-# 设置自定义的 404 错误处理函数
+# 设置自定义的错误处理函数
 api.handle_error = custom_404_error
 
 # 注册资源

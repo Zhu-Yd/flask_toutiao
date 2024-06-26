@@ -64,3 +64,6 @@ def register_buleprint(app: Flask):
     # 导入频道模块蓝图
     from app.resource.channel import channel_bp
     app.register_blueprint(channel_bp)
+    # 导入文章模块蓝图
+    from app.resource.article import article_bp
+    app.register_blueprint(article_bp)

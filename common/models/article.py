@@ -67,5 +67,5 @@ class Comment(BaseModel):
     user_id = db.Column(db.Integer, db.ForeignKey('tt_user.id'))
     pubdat = db.Column(db.DateTime, default=datetime.now)
     article_id = db.Column(db.Integer, db.ForeignKey('tt_article.id'))
-    is_top = db.Column(db.Integer)
+    is_top = db.Column(db.Integer, default=IsTop.NO)
     comment_id = db.Column(db.Integer, default=0, doc='父级评论ID')
