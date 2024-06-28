@@ -1,4 +1,5 @@
 import os
+import time
 from flask_restful import Resource, inputs
 import flask_restful
 from flask import g
@@ -8,7 +9,7 @@ from sqlalchemy.orm import load_only
 from flask_restful.reqparse import RequestParser
 
 from utils.decorators import login_required
-from app import db
+from app import db, redis_cli
 from models.user import User, UserProfile, user2user
 from models.article import Article, IsLike, Comment
 from utils import validate_util, qiniu_storage
@@ -260,3 +261,43 @@ class UserUnFollowingsResource(Resource):
             flask_restful.abort(500, message=str(e))
 
         return {'status': 200, 'message': '取消关注用户成功'}
+
+
+class UserHistoryResource(Resource):
+    method_decorators = {'get': [login_required], 'post': [login_required], 'delete': [login_required]}
+    PREFIX = 'UserHistory_'
+
+    def get(self):
+        """获取用户历史记录"""
+        try:
+            res = redis_cli.zrange(self.PREFIX + str(g.userInfo.get('id')), 0, -1, True)
+        except Exception as e:
+            flask_restful.abort(500, message=str(e))
+        return {'status': 200, 'message': '获取用户历史记录成功', 'data': res}
+
+    def post(self):
+        """添加用户历史记录"""
+        parser = RequestParser()
+        parser.add_argument('keys', required=True, type=validate_util.notNoneStr, location=['form', 'json'])
+        args = parser.parse_args()
+        try:
+            redis_cli.zadd(self.PREFIX + str(g.userInfo.get('id')), {args['keys']: time.time() * 1000})
+        except Exception as e:
+            flask_restful.abort(500, message=str(e))
+        return {'status': 200, 'message': '添加用户搜索历史记录成功'}
+
+    def delete(self):
+        """[删除|清空]用户历史记录"""
+        parser = RequestParser()
+        parser.add_argument('keys', type=validate_util.notNoneStr, location=['form', 'json'])
+        args = parser.parse_args()
+        try:
+            if not args['keys']:
+                redis_cli.delete(self.PREFIX + str(g.userInfo.get('id')))
+                message = '清空用户历史记录成功'
+            else:
+                redis_cli.zrem(self.PREFIX + str(g.userInfo.get('id')), args['keys'])
+                message = '删除用户指定搜索历史记录成功'
+        except Exception as e:
+            flask_restful.abort(500, str(e))
+        return {'status': 200, 'message': message}

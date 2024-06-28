@@ -40,7 +40,8 @@ def register_extensions(app: Flask):
     redis_cli = StrictRedis(
         host=app.config['REDIS_HOST'],
         port=app.config['REDIS_PORT'],
-        password=app.config['REDIS_PASSWORD']
+        password=app.config['REDIS_PASSWORD'],
+        decode_responses=True  # 自动解码
     )
 
     # 加载自定义路由转换器:转换器必须在蓝图注册之前注册
