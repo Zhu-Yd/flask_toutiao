@@ -1,4 +1,7 @@
-from app import db
+from flask_sqlalchemy import SQLAlchemy
+from models.db_routing.routing_sqlalchemy import RoutingSQLAlchemy
+# 数据库对象
+db: SQLAlchemy = RoutingSQLAlchemy()
 
 
 class BaseModel(db.Model):

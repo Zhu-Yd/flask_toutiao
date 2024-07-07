@@ -5,11 +5,11 @@ from flask import request
 from sqlalchemy import desc
 from models.channel import Channel, User2Channel
 from app import db
-from utils.decorators import login_required
+from utils.decorators import login_required, set_read_db
 
 
 class ChannelsResource(Resource):
-    method_decorators = {'put': [login_required]}
+    method_decorators = {'put': [login_required], 'get': [set_read_db]}
 
     def get(self):
         """获取用户频道信息"""
@@ -64,6 +64,8 @@ class ChannelsResource(Resource):
 
 
 class ChannelsAllResource(Resource):
+    method_decorators = {'get': [set_read_db]}
+
     def get(self):
         """获取全部频道信息"""
         channels = db.session.query(Channel).order_by(Channel.id).all()

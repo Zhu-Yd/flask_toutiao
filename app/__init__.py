@@ -1,12 +1,9 @@
 from flask import Flask
 from app.settings.config import config_dict
 from utils import constants, converters
-from flask_sqlalchemy import SQLAlchemy
 from redis import StrictRedis
 from flask_cors import CORS
-
-# 数据库对象
-db: SQLAlchemy = SQLAlchemy()
+from models import db
 
 # redis对象
 redis_cli = None  # type: StrictRedis

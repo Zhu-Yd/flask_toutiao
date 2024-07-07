@@ -8,7 +8,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import load_only
 from flask_restful.reqparse import RequestParser
 
-from utils.decorators import login_required
+from utils.decorators import login_required, set_read_db
 from app import db, redis_cli
 from models.user import User, UserProfile, user2user
 from models.article import Article, IsLike, Comment
@@ -21,7 +21,7 @@ class TodoItem(Resource):
 
 
 class CurrentUserProfileResource(Resource):
-    method_decorators = {'get': [login_required], 'patch': [login_required]}
+    method_decorators = {'get': [login_required, set_read_db], 'patch': [login_required]}
 
     def get(self):
         """获取当前用户信息"""
@@ -101,7 +101,7 @@ class CurrentUserProfileResource(Resource):
 
 
 class SpecifyUserProfileResource(Resource):
-    method_decorators = {'get': [login_required]}
+    method_decorators = {'get': [login_required, set_read_db]}
 
     def get(self, id):
         """获取指定用户相关数据"""
@@ -133,13 +133,13 @@ class SpecifyUserProfileResource(Resource):
             Comment.user_id == id, IsLike.like_type == IsLike.LikeType.COMMENT).scalar()
 
         res_dict = {'follow_count': follow_count, 'fans_count': fans_count, 'art_count': art_count,
-                    'like_count': a_like_count + c_like_count}
+                    'like_count': a_like_count + c_like_count, 'photo': g.userInfo.get('photo')}
 
         return {'status': 200, 'message': '获取指定用户信息成功', 'data': res_dict}
 
 
 class UserFollowingsResource(Resource):
-    method_decorators = {'get': [login_required], 'post': [login_required]}
+    method_decorators = {'get': [login_required, set_read_db], 'post': [login_required]}
 
     def get(self):
         """获取用户关注列表"""
@@ -206,7 +206,7 @@ class UserFollowingsResource(Resource):
 
 
 class UserFollowersResource(Resource):
-    method_decorators = {'get': [login_required]}
+    method_decorators = {'get': [login_required, set_read_db]}
 
     def get(self):
         """获取用户粉丝列表"""

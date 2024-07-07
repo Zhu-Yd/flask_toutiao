@@ -3,7 +3,7 @@ import flask_restful
 from flask_restful.reqparse import RequestParser
 from sqlalchemy.orm import load_only
 from sqlalchemy import func, desc
-from utils.decorators import login_required
+from utils.decorators import login_required, set_read_db
 from flask import g
 from models.article import Article, user2article, IsLike, Comment
 from models.user import User, user2user
@@ -12,7 +12,7 @@ from utils import validate_util
 
 
 class CollectionsResource(Resource):
-    method_decorators = {'get': [login_required], 'post': [login_required]}
+    method_decorators = {'get': [login_required, set_read_db], 'post': [login_required]}
 
     def get(self):
         """获取当前用户收藏文章列表"""
@@ -116,7 +116,7 @@ class LikingsResource(Resource):
 
 
 class CommentsResource(Resource):
-    method_decorators = {'post': [login_required]}
+    method_decorators = {'post': [login_required], 'get': [set_read_db]}
 
     def get(self):
         parser = RequestParser()
@@ -206,7 +206,7 @@ class CommentsResource(Resource):
 
 
 class CommentResource(Resource):
-    method_decorators = {}
+    method_decorators = {'get': [set_read_db]}
 
     def get(self):
         parser = RequestParser()
@@ -232,6 +232,8 @@ class CommentResource(Resource):
 
 
 class CommentsCountResource(Resource):
+    method_decorators = {'get': [set_read_db]}
+
     def get(self):
         parser = RequestParser()
         parser.add_argument('target', type=int, required=True, location=['args'])
@@ -241,6 +243,8 @@ class CommentsCountResource(Resource):
 
 
 class ArticlesResource(Resource):
+    method_decorators = {'get': [set_read_db]}
+
     def get(self):
         parser = RequestParser()
         parser.add_argument('per_page', type=int, default=5, location=['args'])
@@ -296,6 +300,8 @@ class ArticlesResource(Resource):
 
 
 class ArticleResource(Resource):
+    method_decorators = {'get': [set_read_db]}
+
     def get(self, article_id):
         dict = {}
         article, auth = db.session.query(Article, User).join(User, Article.auth_id == User.id).filter(
@@ -327,6 +333,7 @@ class ArticleResource(Resource):
 
 
 class SearchResource(Resource):
+    method_decorators = {'get': [set_read_db]}
 
     def get(self):
         parser = RequestParser()
