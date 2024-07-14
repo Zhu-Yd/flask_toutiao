@@ -19,7 +19,6 @@ def login_required(func):
 def set_wirte_db(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # TODO: 设置写用数据库
         db.session().set_to_write()
         return func(*args, **kwargs)
 
@@ -30,7 +29,6 @@ def set_wirte_db(func):
 def set_read_db(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # TODO: 设置读用数据库
         db.session().set_to_read()
         return func(*args, **kwargs)
 

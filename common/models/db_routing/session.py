@@ -16,11 +16,10 @@ class RoutingSession(SignallingSession):
         获取数据库绑定
         """
         state = get_state(self.app)
-        """Return the engine or connection for a given model or
-               table, using the ``__bind_key__`` if it is set.
-               """
+
         # mapper is None if someone tries to just get a connection
         if mapper is not None:
+            """在模型类中 使用 __bind_key__ = 'db_name' 实现 垂直|水平 分库"""
             try:
                 # SA >= 1.3
                 persist_selectable = mapper.persist_selectable

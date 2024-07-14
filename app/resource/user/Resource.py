@@ -9,7 +9,7 @@ from sqlalchemy.orm import load_only
 from flask_restful.reqparse import RequestParser
 
 from utils.decorators import login_required, set_read_db
-from app import db, redis_cli
+from app import db, redis_master,redis_slave
 from models.user import User, UserProfile, user2user
 from models.article import Article, IsLike, Comment
 from utils import validate_util, qiniu_storage
@@ -270,7 +270,7 @@ class UserHistoryResource(Resource):
     def get(self):
         """获取用户历史记录"""
         try:
-            res = redis_cli.zrange(self.PREFIX + str(g.userInfo.get('id')), 0, -1, True)
+            res = redis_slave.zrange(self.PREFIX + str(g.userInfo.get('id')), 0, -1, True)
         except Exception as e:
             flask_restful.abort(500, message=str(e))
         return {'status': 200, 'message': '获取用户历史记录成功', 'data': res}
@@ -281,7 +281,7 @@ class UserHistoryResource(Resource):
         parser.add_argument('keys', required=True, type=validate_util.notNoneStr, location=['form', 'json'])
         args = parser.parse_args()
         try:
-            redis_cli.zadd(self.PREFIX + str(g.userInfo.get('id')), {args['keys']: time.time() * 1000})
+            redis_master.zadd(self.PREFIX + str(g.userInfo.get('id')), {args['keys']: time.time() * 1000})
         except Exception as e:
             flask_restful.abort(500, message=str(e))
         return {'status': 200, 'message': '添加用户搜索历史记录成功'}
@@ -293,10 +293,10 @@ class UserHistoryResource(Resource):
         args = parser.parse_args()
         try:
             if not args['keys']:
-                redis_cli.delete(self.PREFIX + str(g.userInfo.get('id')))
+                redis_master.delete(self.PREFIX + str(g.userInfo.get('id')))
                 message = '清空用户历史记录成功'
             else:
-                redis_cli.zrem(self.PREFIX + str(g.userInfo.get('id')), args['keys'])
+                redis_master.zrem(self.PREFIX + str(g.userInfo.get('id')), args['keys'])
                 message = '删除用户指定搜索历史记录成功'
         except Exception as e:
             flask_restful.abort(500, str(e))
