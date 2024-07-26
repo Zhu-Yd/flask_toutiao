@@ -7,5 +7,9 @@
 **/config.py
 
 *.pem
+*.json
+*.bak
+*.dat
+*.dir
 
 **/.qiniu_pythonsdk_hostscache.json

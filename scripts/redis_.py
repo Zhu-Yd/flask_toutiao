@@ -1,7 +1,7 @@
 from redis import StrictRedis, WatchError
 from redis.sentinel import Sentinel
 
-redis_cli = StrictRedis(host='192.168.1.66', port=6379, db=0, password='zyd910219', decode_responses=True)
+redis_cli = StrictRedis(host='192.168.3.66', port=6379, db=0, password='zyd910219', decode_responses=True)
 
 
 # decode_responses 是否自动解码
@@ -48,7 +48,7 @@ def test_b_lock():
 
 
 def test_sentinel():
-    SENTINEL_HOST = [('192.168.1.66', 26380), ('192.168.1.66', 26381), ('192.168.1.66', 26382)]
+    SENTINEL_HOST = [('192.168.3.66', 26380), ('192.168.3.66', 26381), ('192.168.3.66', 26382)]
     sentinel = Sentinel(SENTINEL_HOST)  # 获取哨兵
     master_name = 'mymaster'  # 主库别名
     master = sentinel.master_for(master_name, password='zyd910219', decode_responses=True)  # 获取主库实例
